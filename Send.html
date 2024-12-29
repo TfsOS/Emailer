@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Email App</title>
+    <style>
+    /* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f9;
+    color: #333;
+}
+
+h1, h2, h3 {
+    text-align: center;
+    color: #333;
+}
+
+/* Form Styles */
+input, textarea, button {
+    display: block;
+    width: 80%;
+    margin: 10px auto;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+button {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Dashboard Styles */
+#dashboard {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+    max-width: 600px;
+}
+
+#auth-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+    max-width: 600px;
+}
+
+textarea {
+    height: 100px;
+    resize: none;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    background-color: #f9f9f9;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    word-wrap: break-word;
+}
+    </style>
+</head>
+<body>
+    <h1>Email App</h1>
+
+    <div id="auth-section">
+        <h2>Register</h2>
+        <input type="email" id="register-email" placeholder="Email">
+        <input type="password" id="register-password" placeholder="Password">
+        <button id="register-button">Register</button>
+
+        <h2>Login</h2>
+        <input type="email" id="login-email" placeholder="Email">
+        <input type="password" id="login-password" placeholder="Password">
+        <button id="login-button">Login</button>
+    </div>
+
+    <div id="dashboard" style="display: none;">
+        <h2>Dashboard</h2>
+        <button id="logout-button">Logout</button>
+
+        <h3>Compose Email</h3>
+        <input type="email" id="to-email" placeholder="To">
+        <input type="text" id="email-subject" placeholder="Subject">
+        <textarea id="email-body" placeholder="Body"></textarea>
+        <button id="send-email-button">Send Email</button>
+
+        <h3>Inbox</h3>
+        <ul id="inbox"></ul>
+    </div>
+
+    <!-- Firebase initialization -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAY3YU19hWZQXlQXlQ8L5a4HAwxT_Wu9c5PeU",
+            authDomain: "smaple-55b63.firebaseapp.com",
+            projectId: "smaple-55b63",
+            storageBucket: "smaple-55b63.firebasestorage.app",
+            messagingSenderId: "384828942986",
+            appId: "1:384828942986:web:501ead82769340c7fa5b73"
+        };
+
+
+    </script>
+    <script type="module">
+
+        // Elements
+        const authSection = document.getElementById("auth-section");
+        const dashboard = document.getElementById("dashboard");
+        const registerButton = document.getElementById("register-button");
+        const loginButton = document.getElementById("login-button");
+        const logoutButton = document.getElementById("logout-button");
+        const sendEmailButton = document.getElementById("send-email-button");
+        const inbox = document.getElementById("inbox");
+
+        // Register
+        registerButton.addEventListener("click", async () => {
+            const email = document.getElementById("register-email").value;
+            const password = document.getElementById("register-password").value;
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                alert("Registered successfully!");
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Login
+        loginButton.addEventListener("click", async () => {
+            const email = document.getElementById("login-email").value;
+            const password = document.getElementById("login-password").value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                alert("Logged in successfully!");
+                authSection.style.display = "none";
+                dashboard.style.display = "block";
+                loadInbox(email);
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Logout
+        logoutButton.addEventListener("click", async () => {
+            try {
+                await signOut(auth);
+                alert("Logged out successfully!");
+                authSection.style.display = "block";
+                dashboard.style.display = "none";
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Send Email
+        sendEmailButton.addEventListener("click", async () => {
+            const toEmail = document.getElementById("to-email").value;
+            const subject = document.getElementById("email-subject").value;
+            const body = document.getElementById("email-body").value;
+
+            try {
+                await addDoc(collection(db, "emails"), {
+                    to: toEmail,
+                    from: auth.currentUser.email,
+                    subject: subject,
+                    body: body,
+                    timestamp: new Date().toISOString()
+                });
+                alert("Email sent successfully!");
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Load Inbox
+        async function loadInbox(userEmail) {
+            inbox.innerHTML = "";
+            const q = query(collection(db, "emails"), where("to", "==", userEmail));
+            const querySnapshot = await getDocs(q);
+
+            querySnapshot.forEach((doc) => {
+                const email = doc.data();
+                const listItem = document.createElement("li");
+                listItem.textContent = `${email.timestamp}: ${email.from} -> ${email.subject}`;
+                inbox.appendChild(listItem);
+            });
+        }
+    </script>
+</body>
+</html>
